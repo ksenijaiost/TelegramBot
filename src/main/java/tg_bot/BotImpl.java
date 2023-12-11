@@ -35,7 +35,7 @@ public class BotImpl implements Bot {
     @Override
     public List<String> oneMsg(List<ListOfChatId> chatIds, String text) {
         List<String> answerTgList = new ArrayList<>();
-        for (ListOfChatId chatId: chatIds) {
+        for (ListOfChatId chatId : chatIds) {
             var answerTg = sendFeign(chatId.getChatId(), text);
             answerTgList.add("id: " + answerTg.getResult().getChat().getId()
                     + ", username: " + answerTg.getResult().getChat().getUsername()
@@ -44,6 +44,13 @@ public class BotImpl implements Bot {
         return answerTgList;
     }
 
+    /**
+     * Метод для формирования фейн-запроса в телеграм-апи + логирование.
+     *
+     * @param chatId - id чата телеграм.
+     * @param text   - текст для отпраки.
+     * @return - ответ от телеграм-апи.
+     */
     private AnswerTg sendFeign(String chatId, String text) {
         log.info("Sending msg for {}, text - {}", chatId, text);
         var answer = Optional.ofNullable(feignTg.sendMsgTg(chatId, text))

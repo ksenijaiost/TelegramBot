@@ -25,6 +25,12 @@ import static org.springframework.util.MimeTypeUtils.APPLICATION_JSON_VALUE;
 public class BotController {
     private final Bot bot;
 
+    /**
+     * Отправка сообщений для разных id с разным текстом.
+     *
+     * @param sendingRequest - список id+текст.
+     * @return - список ответов id+имя+текст.
+     */
     @PostMapping(value = "sending", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<List<String>> sendingMsg(@RequestBody SendingRequest sendingRequest) {
         var answer = bot.sendMsg(sendingRequest.getList());
@@ -32,6 +38,12 @@ public class BotController {
                 .body(answer);
     }
 
+    /**
+     * Отправка сообщений для разных id с одним текстом.
+     *
+     * @param oneMsgRequest - список id, один текст.
+     * @return - список ответов id+имя+текст.
+     */
     @PostMapping(value = "oneMsg", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<List<String>> oneMsg(@RequestBody OneMsgRequest oneMsgRequest) {
         var answer = bot.oneMsg(oneMsgRequest.getChatIds(), oneMsgRequest.getText());

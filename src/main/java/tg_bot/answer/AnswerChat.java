@@ -11,15 +11,6 @@ import lombok.*;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AnswerChat {
-    /*
-    "chat": {
-            "id": 882440120,
-            "first_name": "Ta",
-            "last_name": "MaRa",
-            "username": "TamaraKaza",
-            "type": "private"
-        },
-     */
     @JsonProperty("id")
     private String id;
 

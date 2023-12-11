@@ -11,10 +11,10 @@ public interface FeignTg {
     /**
      * Отправка рест запроса - отправка сообщения.
      *
-     * @param chat_id id чата.
-     * @param text    Строка, которую необходимот отправить в качестве сообщения.
-     * @return Ответ на запрос.
+     * @param chatId - id чата.
+     * @param text   - строка, которую необходимот отправить в качестве сообщения.
+     * @return - ответ на запрос.
      */
     @PostMapping(value = "/sendMessage", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-    AnswerTg sendMsgTg(@PathVariable(value = "chat_id") String chat_id, @PathVariable(value = "text") String text);
+    AnswerTg sendMsgTg(@PathVariable(value = "chat_id") String chatId, @PathVariable(value = "text") String text);
 }

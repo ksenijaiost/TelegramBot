@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface Bot {
     public List<String> sendMsg(List<ListOfSending> listOfSending);
+
     public List<String> oneMsg(List<ListOfChatId> chatIds, String text);
 }

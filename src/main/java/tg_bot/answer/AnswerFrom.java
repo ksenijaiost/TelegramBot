@@ -11,14 +11,6 @@ import lombok.*;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AnswerFrom {
-    /*
-    "from": {
-            "id": 6745573437,
-            "is_bot": true,
-            "first_name": "Бот для Тайного Санты среди брейдеров",
-            "username": "dawn_snowflake_bot"
-        },
-     */
     @JsonProperty("id")
     private String id;
 
