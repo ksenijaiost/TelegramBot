@@ -8,7 +8,7 @@ import tg_bot.functions.BotUtils;
 import tg_bot.functions.ContestManager;
 import tg_bot.functions.GuideManager;
 
-import static tg_bot.constants.Constant.*;
+import static tg_bot.constants.BotEnv.*;
 
 @AllArgsConstructor
 public class KeywordBot extends TelegramLongPollingBot {

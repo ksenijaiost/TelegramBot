@@ -7,10 +7,9 @@ import tg_bot.KeywordBot;
 
 import java.time.LocalDateTime;
 
-public class BotUtils {
-    public static final String ADMIN_CHAT_ID = "админский_чат_id";
-    public static final String CONTEST_CHAT_ID = "чат_конкурса_id";
+import static tg_bot.constants.BotEnv.ADMIN_CHAT_ID;
 
+public class BotUtils {
     public static void sendMessage(long chatId, String text, KeywordBot bot) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));

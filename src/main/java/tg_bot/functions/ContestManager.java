@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
-import static tg_bot.constants.Constant.CONTEST_CHAT_ID;
+import static tg_bot.constants.BotEnv.CONTEST_CHAT_ID;
 
 @AllArgsConstructor
 public class ContestManager {
