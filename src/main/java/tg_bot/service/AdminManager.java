@@ -1,16 +1,20 @@
-package tg_bot.functions;
+package tg_bot.service;
 
 import lombok.AllArgsConstructor;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import tg_bot.KeywordBot;
+import tg_bot.bot.AcChatBot;
+import tg_bot.utils.AuthUtils;
+import tg_bot.utils.BotUtils;
 
 @AllArgsConstructor
 public class AdminManager {
-    private final KeywordBot bot;
+    private final AcChatBot bot;
+    private final BotUtils botUtils;
+    private final AuthUtils authUtils;
 
     public void handleAdminCommand(long chatId, String text, Message message) {
-        if (!BotUtils.isAdmin(chatId)) {
-            BotUtils.sendMessage(chatId, "У вас нет прав для этой команды.", bot);
+        if (!authUtils.isAdmin(chatId)) {
+            botUtils.sendMessage(chatId, "У вас нет прав для этой команды.", bot);
             return;
         }
 
@@ -19,7 +23,7 @@ public class AdminManager {
                 resetContest(chatId);
                 break;
             case "/updateinfo":
-                BotUtils.sendMessage(chatId, "Введите данные о конкурсе...", bot);
+                botUtils.sendMessage(chatId, "Введите данные о конкурсе...", bot);
                 break;
             case "Начать рассылку судьям":
                 startJudgeBroadcast(chatId);
@@ -29,11 +33,11 @@ public class AdminManager {
 
     private void resetContest(long chatId) {
         // Логика сброса конкурса
-        BotUtils.sendMessage(chatId, "Конкурс сброшен: счётчик и список судей обнулены.", bot);
+        botUtils.sendMessage(chatId, "Конкурс сброшен: счётчик и список судей обнулены.", bot);
     }
 
     private void startJudgeBroadcast(long chatId) {
         // Логика рассылки судьям
-        BotUtils.sendMessage(chatId, "Рассылка судьям начата.", bot);
+        botUtils.sendMessage(chatId, "Рассылка судьям начата.", bot);
     }
 }

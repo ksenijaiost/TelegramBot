@@ -1,4 +1,4 @@
-package tg_bot.functions;
+package tg_bot.service;
 
 import lombok.AllArgsConstructor;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -11,7 +11,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import tg_bot.KeywordBot;
+import tg_bot.bot.AcChatBot;
+import tg_bot.utils.AuthUtils;
+import tg_bot.utils.BotUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -22,18 +24,20 @@ import static tg_bot.constants.BotEnv.CONTEST_CHAT_ID;
 
 @AllArgsConstructor
 public class ContestManager {
-    private final KeywordBot bot;
+    private final AcChatBot bot;
+    private final BotUtils botUtils;
+    private final AuthUtils authUtils;
     private LocalDate contestStartDate;
     private LocalDate contestEndDate;
-    private int workCounter = 1;
-    private Set<Long> judges = new HashSet<>();
-    private Set<Long> participants = new HashSet<>();
-    private Map<Long, String> judgeCodes = new HashMap<>();
-    private Map<Long, Set<Long>> selectedJudges = new HashMap<>();
-    private Map<Long, Boolean> waitingForGoogleFormLink = new HashMap<>();
-    private String contestTheme = "Тема конкурса";
-    private String contestAnnouncementLink = "https://example.com/announcement";
-    private String contestRulesLink = "https://example.com/rules";
+    private int workCounter;
+    private Set<Long> judges;
+    private Set<Long> participants;
+    private Map<Long, String> judgeCodes;
+    private Map<Long, Set<Long>> selectedJudges;
+    private Map<Long, Boolean> waitingForGoogleFormLink;
+    private String contestTheme;
+    private String contestAnnouncementLink;
+    private String contestRulesLink;
 
     public void handleContestCommand(long chatId, String text, Message message) {
         switch (text) {
@@ -60,9 +64,9 @@ public class ContestManager {
 
     private void handleContestSubmission(long chatId) {
         if (isContestActive()) {
-            BotUtils.sendMessage(chatId, "Отправьте до 10 фото и текст для вашей работы.", bot);
+            botUtils.sendMessage(chatId, "Отправьте до 10 фото и текст для вашей работы.", bot);
         } else {
-            BotUtils.sendMessage(chatId, "Приём работ на конкурс закрыт. Следите за новостями!", bot);
+            botUtils.sendMessage(chatId, "Приём работ на конкурс закрыт. Следите за новостями!", bot);
         }
     }
 
@@ -83,13 +87,13 @@ public class ContestManager {
                 }
                 bot.execute(new SendMessage(CONTEST_CHAT_ID, contestMessage.toString()));
             } catch (TelegramApiException e) {
-                BotUtils.log("Ошибка при отправке работы: " + e.getMessage());
+                botUtils.log("Ошибка при отправке работы: " + e.getMessage());
             }
 
-            BotUtils.sendMessage(chatId, "Ваша работа принята! Номер работы: #" + workCounter, bot);
+            botUtils.sendMessage(chatId, "Ваша работа принята! Номер работы: #" + workCounter, bot);
             workCounter++;
         } else {
-            BotUtils.sendMessage(chatId, "Приём работ на конкурс закрыт. Следите за новостями!", bot);
+            botUtils.sendMessage(chatId, "Приём работ на конкурс закрыт. Следите за новостями!", bot);
         }
     }
 
@@ -97,17 +101,17 @@ public class ContestManager {
         if (text.equalsIgnoreCase("назад")) {
             sendMainMenu(chatId);
         } else if (text.matches("\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}\\.\\d{2}\\.\\d{4}")) {
-            if (BotUtils.isAdmin(chatId)) {
+            if (authUtils.isAdmin(chatId)) {
                 String[] dates = text.split(" ");
                 setContestPeriod(dates[0], dates[1], chatId);
             } else {
-                BotUtils.sendMessage(chatId, "У вас нет прав для этой команды.", bot);
+                botUtils.sendMessage(chatId, "У вас нет прав для этой команды.", bot);
             }
         } else if (waitingForGoogleFormLink.getOrDefault(chatId, false)) {
             handleGoogleFormLink(chatId, text);
         } else {
-            String response = getResponseByKeyword(text);
-            BotUtils.sendMessage(chatId, response, bot);
+//            String response = getResponseByKeyword(text);
+//            botUtils.sendMessage(chatId, response, bot);
         }
     }
 
@@ -129,6 +133,21 @@ public class ContestManager {
     }
 
     private void sendContestMenu(long chatId) {
+        ReplyKeyboardMarkup keyboardMarkup = getReplyKeyboardMarkup();
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Меню конкурса:");
+        message.setReplyMarkup(keyboardMarkup);
+
+        try {
+            bot.execute(message);
+        } catch (TelegramApiException e) {
+            botUtils.log("Ошибка при отправке меню конкурса: " + e.getMessage());
+        }
+    }
+
+    private static ReplyKeyboardMarkup getReplyKeyboardMarkup() {
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboard = new ArrayList<>();
 
@@ -145,81 +164,77 @@ public class ContestManager {
 
         keyboardMarkup.setKeyboard(keyboard);
         keyboardMarkup.setResizeKeyboard(true);
-
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText("Меню конкурса:");
-        message.setReplyMarkup(keyboardMarkup);
-
-        try {
-            bot.execute(message);
-        } catch (TelegramApiException e) {
-            BotUtils.log("Ошибка при отправке меню конкурса: " + e.getMessage());
-        }
+        return keyboardMarkup;
     }
 
     private void sendContestInfo(long chatId) {
         String contestInfo = String.format(
-                "🎉 *Тема конкурса*: %s\n" +
-                        "📅 *Дата проведения*: с %s по %s\n" +
-                        "🔗 *Анонс*: %s\n" +
-                        "📜 *Правила*: %s",
+                """
+                        🎉 *Тема конкурса*: %s
+                        📅 *Дата проведения*: с %s по %s
+                        🔗 *Анонс*: %s
+                        📜 *Правила*: %s""",
                 contestTheme, contestStartDate, contestEndDate, contestAnnouncementLink, contestRulesLink
         );
 
-        BotUtils.sendMessage(chatId, contestInfo, bot);
+        botUtils.sendMessage(chatId, contestInfo, bot);
     }
 
     private void handleJudgeRegistration(long chatId) {
         if (participants.contains(chatId)) {
-            BotUtils.sendMessage(chatId, "Вы не можете судить, так как уже участвуете в конкурсе.", bot);
+            botUtils.sendMessage(chatId, "Вы не можете судить, так как уже участвуете в конкурсе.", bot);
             sendContestMenu(chatId);
         } else if (judges.contains(chatId)) {
-            BotUtils.sendMessage(chatId, "Вы уже записаны на судейство.", bot);
+            botUtils.sendMessage(chatId, "Вы уже записаны на судейство.", bot);
             sendContestMenu(chatId);
         } else {
-            ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-            List<KeyboardRow> keyboard = new ArrayList<>();
-
-            KeyboardRow row1 = new KeyboardRow();
-            row1.add("Согласен");
-            row1.add("Назад к конкурсам");
-            row1.add("В главное меню");
-
-            keyboard.add(row1);
-
-            keyboardMarkup.setKeyboard(keyboard);
-            keyboardMarkup.setResizeKeyboard(true);
-
-            SendMessage message = new SendMessage();
-            message.setChatId(String.valueOf(chatId));
-            message.setText("Вы согласны стать судьёй?");
-            message.setReplyMarkup(keyboardMarkup);
+            SendMessage message = getSendMessage(chatId);
 
             try {
                 bot.execute(message);
             } catch (TelegramApiException e) {
-                BotUtils.log("Ошибка при отправке сообщения: " + e.getMessage());
+                botUtils.log("Ошибка при отправке сообщения: " + e.getMessage());
             }
         }
     }
 
+    private static SendMessage getSendMessage(long chatId) {
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("Согласен");
+        row1.add("Назад к конкурсам");
+        row1.add("В главное меню");
+
+        keyboard.add(row1);
+
+        keyboardMarkup.setKeyboard(keyboard);
+        keyboardMarkup.setResizeKeyboard(true);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Вы согласны стать судьёй?");
+        message.setReplyMarkup(keyboardMarkup);
+        return message;
+    }
+
     private void confirmJudgeRegistration(long chatId) {
         judges.add(chatId);
-        BotUtils.sendMessage(chatId, "Вы успешно записаны на судейство!", bot);
-        BotUtils.notifyAdmin("Пользователь " + chatId + " записался на судейство.", bot);
+        botUtils.sendMessage(chatId, "Вы успешно записаны на судейство!", bot);
+        botUtils.notifyAdmin("Пользователь " + chatId + " записался на судейство.", bot);
         sendContestMenu(chatId);
     }
 
     private void cancelJudgeRegistration(long chatId) {
         judges.remove(chatId);
-        BotUtils.sendMessage(chatId, "Вы отменили запись на судейство.", bot);
+        botUtils.sendMessage(chatId, "Вы отменили запись на судейство.", bot);
         sendContestMenu(chatId);
     }
 
     private void showJudgeSelection(long chatId) {
         if (judges.isEmpty()) {
-            BotUtils.sendMessage(chatId, "Нет записавшихся судей.", bot);
+            botUtils.sendMessage(chatId, "Нет записавшихся судей.", bot);
             return;
         }
 
@@ -259,7 +274,7 @@ public class ContestManager {
         try {
             bot.execute(message);
         } catch (TelegramApiException e) {
-            BotUtils.log("Ошибка при отправке сообщения: " + e.getMessage());
+            botUtils.log("Ошибка при отправке сообщения: " + e.getMessage());
         }
     }
 
@@ -276,16 +291,15 @@ public class ContestManager {
     private void confirmBroadcast(long chatId) {
         Set<Long> selected = selectedJudges.get(chatId);
         if (selected == null || selected.isEmpty()) {
-            BotUtils.sendMessage(chatId, "Не выбрано ни одного судьи.", bot);
+            botUtils.sendMessage(chatId, "Не выбрано ни одного судьи.", bot);
             return;
         }
 
-        BotUtils.sendMessage(chatId, "Введите ссылку на Google Forms:", bot);
+        botUtils.sendMessage(chatId, "Введите ссылку на Google Forms:", bot);
         waitingForGoogleFormLink.put(chatId, true);
     }
 
     private void handleGoogleFormLink(long chatId, String text) {
-        String googleFormLink = text;
 
         for (Long judge : selectedJudges.get(chatId)) {
             String code = UUID.randomUUID().toString();
@@ -294,19 +308,20 @@ public class ContestManager {
 
         for (Long judge : selectedJudges.get(chatId)) {
             String messageText = String.format(
-                    "Привет! Мы решили провести небольшой эксперимент в судействе конкурсов: мы приглашаем некоторых активных участников чата, которые не являются участниками, тоже посудить!\n" +
-                            "Почувствовать себя крутым судьёй и сделать свой вклад в победу участников можно тут: %s\n" +
-                            "ВНИМАНИЕ!\n" +
-                            "1) Не забудь ознакомиться с информацией на 1 странице\n" +
-                            "2) В одном из вопросов нужно будет вставить код, он индивидуальный и нужен для защиты от \"левых\" судей (если ссылка попала к тому, к кому не должна была).\n" +
-                            "Твой код (копируется тыком) - `%s`",
-                    googleFormLink, judgeCodes.get(judge)
+                    """
+                            Привет! Мы решили провести небольшой эксперимент в судействе конкурсов: мы приглашаем некоторых активных участников чата, которые не являются участниками, тоже посудить!
+                            Почувствовать себя крутым судьёй и сделать свой вклад в победу участников можно тут: %s
+                            ВНИМАНИЕ!
+                            1) Не забудь ознакомиться с информацией на 1 странице
+                            2) В одном из вопросов нужно будет вставить код, он индивидуальный и нужен для защиты от "левых" судей (если ссылка попала к тому, к кому не должна была).
+                            Твой код (копируется тыком) - `%s`""",
+                    text, judgeCodes.get(judge)
             );
 
-            BotUtils.sendMessage(judge, messageText, bot);
+            botUtils.sendMessage(judge, messageText, bot);
         }
 
-        BotUtils.sendMessage(chatId, "Рассылка выбранным судьям завершена.", bot);
+        botUtils.sendMessage(chatId, "Рассылка выбранным судьям завершена.", bot);
         selectedJudges.remove(chatId);
         waitingForGoogleFormLink.put(chatId, false);
     }
@@ -322,29 +337,15 @@ public class ContestManager {
         try {
             contestStartDate = LocalDate.parse(startDateStr, formatter);
             contestEndDate = LocalDate.parse(endDateStr, formatter);
-            BotUtils.sendMessage(chatId, "Период приёма работ установлен с " + contestStartDate + " по " + contestEndDate, bot);
+            botUtils.sendMessage(chatId,
+                    "Период приёма работ установлен с " + contestStartDate + " по " + contestEndDate, bot);
         } catch (DateTimeParseException e) {
-            BotUtils.sendMessage(chatId, "Неверный формат даты. Используйте формат дд.мм.гггг.", bot);
+            botUtils.sendMessage(chatId, "Неверный формат даты. Используйте формат dd.MM.yyyy.", bot);
         }
     }
 
     private void sendMainMenu(long chatId) {
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        List<KeyboardRow> keyboard = new ArrayList<>();
-
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add("Найти гайд");
-        row1.add("Конкурс");
-
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add("Отправить предложение для админов");
-        row2.add("Отправить информацию для газеты");
-
-        keyboard.add(row1);
-        keyboard.add(row2);
-
-        keyboardMarkup.setKeyboard(keyboard);
-        keyboardMarkup.setResizeKeyboard(true);
+        ReplyKeyboardMarkup keyboardMarkup = getKeyboardMarkup();
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -354,18 +355,27 @@ public class ContestManager {
         try {
             bot.execute(message);
         } catch (TelegramApiException e) {
-            BotUtils.log("Ошибка при отправке главного меню: " + e.getMessage());
+            botUtils.log("Ошибка при отправке главного меню: " + e.getMessage());
         }
     }
 
-    private String getResponseByKeyword(String text) {
-        switch (text.toLowerCase()) {
-            case "java":
-                return "Вот ссылка на документацию по Java: https://docs.oracle.com/javase/8/docs/api/";
-            case "spring":
-                return "Вот ссылка на документацию по Spring: https://spring.io/projects/spring-framework";
-            default:
-                return "Извините, я не знаю такого ключевого слова.";
-        }
+    private static ReplyKeyboardMarkup getKeyboardMarkup() {
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("Найти гайд");
+        row1.add("Конкурс");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("Отправить предложение для администраторов");
+        row2.add("Отправить информацию для газеты");
+
+        keyboard.add(row1);
+        keyboard.add(row2);
+
+        keyboardMarkup.setKeyboard(keyboard);
+        keyboardMarkup.setResizeKeyboard(true);
+        return keyboardMarkup;
     }
 }

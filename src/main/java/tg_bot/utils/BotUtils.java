@@ -1,16 +1,17 @@
-package tg_bot.functions;
+package tg_bot.utils;
 
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import tg_bot.KeywordBot;
+import tg_bot.bot.AcChatBot;
 
 import java.time.LocalDateTime;
 
 import static tg_bot.constants.BotEnv.ADMIN_CHAT_ID;
+import static tg_bot.constants.Buttons.*;
 
 public class BotUtils {
-    public static void sendMessage(long chatId, String text, KeywordBot bot) {
+    public void sendMessage(long chatId, String text, AcChatBot bot) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
@@ -22,7 +23,15 @@ public class BotUtils {
         }
     }
 
-    public static void sendMessageWithKeyboard(long chatId, String text, ReplyKeyboardMarkup keyboardMarkup, KeywordBot bot) {
+    public void sendNotMemberWarning(long chatId, AcChatBot bot) {
+        String warning = "⚠️ Для использования этой функции необходимо быть участником нашего чата!\n" +
+                "Присоединяйтесь: t.me/ваш_чат";
+        sendMessage(chatId, warning, bot);
+    }
+
+    public void sendMessageWithKeyboard(long chatId, String text,
+                                               ReplyKeyboardMarkup keyboardMarkup,
+                                               AcChatBot bot) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
@@ -35,7 +44,7 @@ public class BotUtils {
         }
     }
 
-    public static void sendHelp(long chatId, boolean isAdmin, KeywordBot bot) {
+    public void sendHelp(long chatId, boolean isAdmin, AcChatBot bot) {
         String helpText;
         if (isAdmin) {
             helpText = "📋 *Команды для админа*:\n" +
@@ -45,22 +54,24 @@ public class BotUtils {
                     "Конкурс - Управление конкурсом";
         } else {
             helpText = "📋 *Команды для пользователей*:\n" +
-                    "Конкурс - Узнать о конкурсе и участвовать\n" +
-                    "Найти гайд - Поиск гайдов по ключевым словам";
+                    USER_GUIDES + " - Поиск гайдов по ключевым словам\n" +
+                    USER_CONTEST + " - Узнать о конкурсе, записаться на участие или судейство\n" +
+                    USER_TO_ADMIN + " - Отправить сообщения админам\n" +
+                    USER_TO_NEWS + " - Отправить новости в газету чата\n" +
+                    USER_TURNIP + " - Информация о скупке репы админами\n" +
+                    USER_HEAD_CHAT + " - Ссылка на наш чат по Animal Crossing\n" +
+                    USER_CHANEL + " - Ссылка на наш канал по Animal Crossing\n" +
+                    USER_CHAT_NINTENDO + " - Ссылка на чат с темами по играм Nintendo, а также оффтоп-темой\n" ;
         }
 
         sendMessage(chatId, helpText, bot);
     }
 
-    public static void notifyAdmin(String message, KeywordBot bot) {
+    public void notifyAdmin(String message, AcChatBot bot) {
         sendMessage(Long.parseLong(ADMIN_CHAT_ID), "[Уведомление] " + message, bot);
     }
 
-    public static void log(String message) {
+    public void log(String message) {
         System.out.println("[LOG] " + LocalDateTime.now() + " - " + message);
-    }
-
-    public static boolean isAdmin(long chatId) {
-        return String.valueOf(chatId).equals(ADMIN_CHAT_ID);
     }
 }
